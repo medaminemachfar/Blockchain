@@ -85,7 +85,8 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [
@@ -148,7 +149,8 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     }
   ],
   "metadata": "{\"compiler\":{\"version\":\"0.8.21+commit.d9974bed\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"buyer\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"EnergyBought\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"seller\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"EnergySold\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"}],\"name\":\"UserRegistered\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"buyEnergy\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_user\",\"type\":\"address\"}],\"name\":\"getUserDetails\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_name\",\"type\":\"string\"}],\"name\":\"registerUser\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"sellEnergy\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"users\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"tokens\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"isRegistered\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"project:/contracts/EnergyTrading.sol\":\"EnergyTrading\"},\"evmVersion\":\"shanghai\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[]},\"sources\":{\"project:/contracts/EnergyTrading.sol\":{\"keccak256\":\"0x33573e58a222c636d259a89708183e5908765ea0ef09ae648ded82c53f42897b\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://5e60cd2cf5ad39062b106e3154685ea4014c5d3d79625ed500cc9005d839a16b\",\"dweb:/ipfs/QmUKKzML27m1AJB49uB4wPQCvS2mJYyF6tckYLZRWUFBu5\"]}},\"version\":1}",
@@ -12036,15 +12038,64 @@
     "version": "0.8.21+commit.d9974bed.Emscripten.clang"
   },
   "networks": {
-    "1733443612211": {
+    "1733594956327": {
       "events": {},
       "links": {},
-      "address": "0x6A6625Ed6C3EE5549a3f20f18a1d71BfA59eA4d5",
-      "transactionHash": "0xa69b4d2c4173f5d33adfbf8cd9478ec70988294a3049b5345c90bde2ce4e329e"
+      "address": "0x7a533c14734E8950F926f2ECCba8fAB2f0E7E5E4",
+      "transactionHash": "0xb088fe27db796e813189b93ce67bd896705a9c26052356b7d5ee5423c3fc8d77"
+    },
+    "1733596000172": {
+      "events": {},
+      "links": {},
+      "address": "0x0aE5E2F2F7E4E4319C038C707c340375C2a1F0E4",
+      "transactionHash": "0x0658fa4a9f60e4656e747e37765f50b32d4ad9a8fe5460b4305b4f5071128ec1"
+    },
+    "1733596719469": {
+      "events": {},
+      "links": {},
+      "address": "0xE2DE2256E1d21074be438c209EF550cf113F4459",
+      "transactionHash": "0xc4811b68b625397245754080d10095f67a25b191025bccb896cef3dc3c16fb51"
+    },
+    "1733596840799": {
+      "events": {},
+      "links": {},
+      "address": "0x357F7371B07277e69C314D3fE8A3D67885f810c5",
+      "transactionHash": "0xab9b299e83ecdcd4d590131dc001ca23996844d6ab9f6338d402ecb841f04cb9"
+    },
+    "1733597259021": {
+      "events": {},
+      "links": {},
+      "address": "0x5Df5EbbC45dd6ea93F2bB80F29eE7e6E26fD261d",
+      "transactionHash": "0x2bb3b6de26d92647c294219eb588abe1f6d447f277fa1f683194d9f73d82b35d"
+    },
+    "1733597353661": {
+      "events": {},
+      "links": {},
+      "address": "0x44E094835faA173F5F99453846819eC70FBBFE92",
+      "transactionHash": "0x00ba59b1cccddaadd08dc9145232d928ab86559e1a81dec989b2fec8997cb8bd"
+    },
+    "1733597491939": {
+      "events": {},
+      "links": {},
+      "address": "0x0ada7B44e5EA67d79c2A519B70C23d5219d6d70f",
+      "transactionHash": "0x7c3450c995de1faa190afae44dff52cd5fba52ecf51683b0bb6aa993cda1e0b2"
+    },
+    "1733597629893": {
+      "events": {},
+      "links": {},
+      "address": "0x01168f0D6389CBB3F29BE65f72DDF7b1284d40c9",
+      "transactionHash": "0xabf05edbf88e8381d9bde7168c0447dad6466fbc23eca2fc0d6875851027af4c"
+    },
+    "1733597963464": {
+      "events": {},
+      "links": {},
+      "address": "0x91B823966784DB1E74e8fA130B5a1817a891DFB6",
+      "transactionHash": "0x7c8ad9d36ba4eb19bc31382fb72aec91b6bb7a359e18d0a5430f749cce63721b"
     }
   },
   "schemaVersion": "3.4.16",
-  "updatedAt": "2024-12-06T23:23:49.367Z",
+  "updatedAt": "2024-12-07T18:59:41.340Z",
+  "networkType": "ethereum",
   "devdoc": {
     "kind": "dev",
     "methods": {},

@@ -45,19 +45,19 @@
 // const { MNEMONIC, PROJECT_ID } = process.env;
 
 // const HDWalletProvider = require('@truffle/hdwallet-provider');
-
 module.exports = {
-  networks: {
+    contracts_build_directory: "./front/energy-trading/src/contracts",
+    networks: {
       development: {
-          host: "127.0.0.1",     // Localhost
-          port: 8545,            // Ganache default port
-          network_id: "*",       // Match any network ID
+        host: "127.0.0.1",
+        port: 8545,
+        network_id: "*",
       },
-  },
-  compilers: {
+    },
+    compilers: {
       solc: {
-          version: "0.8.21",    // Match your Solidity version
+        version: "0.8.21",
       },
-  },
-};
-
+    },
+  };
+  
