@@ -2,49 +2,46 @@
 pragma solidity ^0.8.21;
 
 contract EnergyTrading {
-    // Structure to store user details
     struct User {
         string name;
         uint256 tokens;
         bool isRegistered;
+        bytes32 passwordHash; // Store the hash of the user's password
     }
 
-    // Mapping to store users
     mapping(address => User) public users;
 
-    // Event declarations
     event UserRegistered(address user, string name);
-    event EnergyBought(address buyer, uint256 amount);
-    event EnergySold(address seller, uint256 amount);
 
-    // Function to register a user
-    function registerUser(string memory _name) public {
+    function registerUserWithCredentials(string memory _name, bytes32 _passwordHash) public {
         require(!users[msg.sender].isRegistered, "User already registered");
-        users[msg.sender] = User(_name, 100, true); // Default tokens set to 100
+        users[msg.sender] = User({
+            name: _name,
+            tokens: 100,
+            isRegistered: true,
+            passwordHash: _passwordHash
+        });
         emit UserRegistered(msg.sender, _name);
     }
 
-    // Function to buy energy
+    // Since we now rely on password verification, we remove the require statement from getUserDetails
+    // or we leave it, but remember we must first verify on the frontend before calling restricted functions.
+    function getUserDetails(address _user) public view returns (string memory, uint256) {
+        require(users[_user].isRegistered, "User not registered");
+        return (users[_user].name, users[_user].tokens);
+    }
+
+    // Buy and sell functions remain the same, but you will only call them after verifying user credentials off-chain.
     function buyEnergy(uint256 _amount) public {
         require(users[msg.sender].isRegistered, "User not registered");
         require(users[msg.sender].tokens >= _amount, "Insufficient tokens");
 
         users[msg.sender].tokens -= _amount;
-        emit EnergyBought(msg.sender, _amount);
     }
 
-    // Function to sell energy
     function sellEnergy(uint256 _amount) public {
         require(users[msg.sender].isRegistered, "User not registered");
-
         users[msg.sender].tokens += _amount;
-        emit EnergySold(msg.sender, _amount);
-    }
-
-    // Function to get user details
-    function getUserDetails(address _user) public view returns (string memory, uint256) {
-        require(users[_user].isRegistered, "User not registered");
-        User memory user = users[_user];
-        return (user.name, user.tokens);
     }
 }
+

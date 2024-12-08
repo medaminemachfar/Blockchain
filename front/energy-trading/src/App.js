@@ -1,158 +1,198 @@
 import React, { useEffect, useState } from "react";
 import Web3 from "web3";
 import EnergyTrading from "./contracts/EnergyTrading.json";
+import { sha3 } from "web3-utils";
+import "./App.css"; // Link to the external CSS file for improved styling
 
 function App() {
   const [web3, setWeb3] = useState(null);
-  const [accounts, setAccounts] = useState([]);
   const [contract, setContract] = useState(null);
   const [userDetails, setUserDetails] = useState({ name: "", tokens: 0 });
-  const [newName, setNewName] = useState("");
+  const [registerAddress, setRegisterAddress] = useState("");
+  const [regName, setRegName] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [loginAddress, setLoginAddress] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loggedInAddress, setLoggedInAddress] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
   const [buyAmount, setBuyAmount] = useState(0);
   const [sellAmount, setSellAmount] = useState(0);
 
   useEffect(() => {
     const loadWeb3AndBlockchainData = async () => {
       try {
-        console.log("Initializing Web3...");
         const web3Instance = new Web3("http://127.0.0.1:8545");
         setWeb3(web3Instance);
-
-        const accs = await web3Instance.eth.getAccounts();
-        console.log("Accounts fetched:", accs);
-        setAccounts(accs);
 
         const networkId = await web3Instance.eth.net.getId();
         const deployedNetwork = EnergyTrading.networks[networkId];
 
         if (deployedNetwork) {
-          console.log("Deployed contract found at:", deployedNetwork.address);
           const contractInstance = new web3Instance.eth.Contract(
             EnergyTrading.abi,
             deployedNetwork.address
           );
           setContract(contractInstance);
         } else {
-          console.error("No deployed contract found on this network!");
+          setErrorMessage("No deployed contract found on this network!");
         }
       } catch (error) {
-        console.error("Error during initialization:", error);
+        setErrorMessage("Initialization error. Check console.");
       }
     };
 
     loadWeb3AndBlockchainData();
   }, []);
 
-  const getUserDetails = async (address, contractInstance = contract) => {
+  const getUserDetails = async (address) => {
+    if (!contract) return;
     try {
-      if (!contractInstance) {
-        console.error("Contract not initialized.");
-        return;
-      }
-      console.log("Fetching details for:", address);
-      const details = await contractInstance.methods.getUserDetails(address).call();
-      console.log("User Details fetched:", details);
+      const details = await contract.methods.getUserDetails(address).call();
       setUserDetails({ name: details[0], tokens: details[1] });
-    } catch (error) {
-      console.error("Error fetching user details:", error);
+    } catch {
+      setErrorMessage("Could not fetch user details.");
     }
   };
 
   const handleRegister = async () => {
+    if (!registerAddress || !regName || !regPassword) {
+      setErrorMessage("All fields are required for registration.");
+      return;
+    }
     try {
-      if (!newName.trim()) {
-        console.error("Please enter a valid name before registering.");
-        return;
-      }
+      const passwordHash = sha3(regPassword);
+      await contract.methods
+        .registerUserWithCredentials(regName, passwordHash)
+        .send({ from: registerAddress, gas: 3000000 });
+      setErrorMessage("Registered successfully!");
+    } catch {
+      setErrorMessage("Registration failed.");
+    }
+  };
 
-      if (contract && accounts[0]) {
-        console.log("Registering user with name:", newName, "from account:", accounts[0]);
-        await contract.methods.registerUser(newName)
-          .send({ from: accounts[0], gas: 3000000 });
-        console.log("User registered successfully with name:", newName);
-        await getUserDetails(accounts[0]);
+  const handleLogin = async () => {
+    if (!loginAddress || !loginPassword) {
+      setErrorMessage("All fields are required for login.");
+      return;
+    }
+    try {
+      await getUserDetails(loginAddress);
+      const userDataOnChain = await contract.methods.users(loginAddress).call();
+      const enteredPasswordHash = sha3(loginPassword);
+      if (userDataOnChain.passwordHash === enteredPasswordHash) {
+        setLoggedInAddress(loginAddress);
+        await getUserDetails(loginAddress);
+        setErrorMessage("");
       } else {
-        console.error("Contract or accounts not loaded correctly.");
+        setErrorMessage("Invalid credentials.");
       }
-    } catch (error) {
-      console.error("Error during registration:", error);
+    } catch {
+      setErrorMessage("Login failed.");
     }
   };
 
   const handleBuyEnergy = async () => {
     try {
-      if (contract && accounts[0]) {
-        const amountToBuy = parseInt(buyAmount, 10);
-        console.log("Buying energy:", amountToBuy, "tokens from:", accounts[0]);
-        await contract.methods.buyEnergy(amountToBuy)
-          .send({ from: accounts[0], gas: 3000000 });
-        console.log("Energy bought successfully.");
-        await getUserDetails(accounts[0]);
-      } else {
-        console.error("Contract or accounts not loaded correctly for buying.");
-      }
-    } catch (error) {
-      console.error("Error buying energy:", error);
+      const amountToBuy = parseInt(buyAmount, 10);
+      await contract.methods.buyEnergy(amountToBuy).send({
+        from: loggedInAddress,
+        gas: 3000000,
+      });
+      await getUserDetails(loggedInAddress);
+    } catch {
+      setErrorMessage("Error buying energy.");
     }
   };
 
   const handleSellEnergy = async () => {
     try {
-      if (contract && accounts[0]) {
-        const amountToSell = parseInt(sellAmount, 10);
-        console.log("Selling energy:", amountToSell, "tokens from:", accounts[0]);
-        await contract.methods.sellEnergy(amountToSell)
-          .send({ from: accounts[0], gas: 3000000 });
-        console.log("Energy sold successfully.");
-        await getUserDetails(accounts[0]);
-      } else {
-        console.error("Contract or accounts not loaded correctly for selling.");
-      }
-    } catch (error) {
-      console.error("Error selling energy:", error);
+      const amountToSell = parseInt(sellAmount, 10);
+      await contract.methods.sellEnergy(amountToSell).send({
+        from: loggedInAddress,
+        gas: 3000000,
+      });
+      await getUserDetails(loggedInAddress);
+    } catch {
+      setErrorMessage("Error selling energy.");
     }
   };
 
   return (
-    <div>
-      <h1>Energy Trading</h1>
-      <h2>Account: {accounts.length > 0 ? accounts[0] : "No account loaded"}</h2>
-      <h3>User Details</h3>
-      <p>Name: {userDetails.name}</p>
-      <p>Tokens: {userDetails.tokens}</p>
-
-      <div>
-        <h3>Register</h3>
-        <input
-          type="text"
-          placeholder="Enter your name"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-        />
-        <button onClick={handleRegister}>Register</button>
-      </div>
-
-      <div>
-        <h3>Buy Energy</h3>
-        <input
-          type="number"
-          placeholder="Enter amount to buy"
-          value={buyAmount}
-          onChange={(e) => setBuyAmount(e.target.value)}
-        />
-        <button onClick={handleBuyEnergy}>Buy Energy</button>
-      </div>
-
-      <div>
-        <h3>Sell Energy</h3>
-        <input
-          type="number"
-          placeholder="Enter amount to sell"
-          value={sellAmount}
-          onChange={(e) => setSellAmount(e.target.value)}
-        />
-        <button onClick={handleSellEnergy}>Sell Energy</button>
-      </div>
+    <div className="app-container">
+      <h1 className="app-title">Energy Trading Platform</h1>
+      {errorMessage && <p className="error-message">{errorMessage}</p>}
+      {!loggedInAddress && (
+        <div className="card">
+          <h3>Register</h3>
+          <input
+            type="text"
+            placeholder="Address"
+            value={registerAddress}
+            onChange={(e) => setRegisterAddress(e.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Name"
+            value={regName}
+            onChange={(e) => setRegName(e.target.value)}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={regPassword}
+            onChange={(e) => setRegPassword(e.target.value)}
+          />
+          <button className="btn" onClick={handleRegister}>
+            Register
+          </button>
+          <h3>Login</h3>
+          <input
+            type="text"
+            placeholder="Address"
+            value={loginAddress}
+            onChange={(e) => setLoginAddress(e.target.value)}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={loginPassword}
+            onChange={(e) => setLoginPassword(e.target.value)}
+          />
+          <button className="btn" onClick={handleLogin}>
+            Login
+          </button>
+        </div>
+      )}
+      {loggedInAddress && (
+        <div className="card">
+          <h2>Welcome, {userDetails.name}</h2>
+          <p>Tokens: {userDetails.tokens}</p>
+          <div>
+            <h3>Buy Energy</h3>
+            <input
+              type="number"
+              placeholder="Amount"
+              value={buyAmount}
+              onChange={(e) => setBuyAmount(e.target.value)}
+            />
+            <button className="btn" onClick={handleBuyEnergy}>
+              Buy Energy
+            </button>
+          </div>
+          <div>
+            <h3>Sell Energy</h3>
+            <input
+              type="number"
+              placeholder="Amount"
+              value={sellAmount}
+              onChange={(e) => setSellAmount(e.target.value)}
+            />
+            <button className="btn" onClick={handleSellEnergy}>
+              Sell Energy
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
