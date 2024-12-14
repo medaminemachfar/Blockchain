@@ -48,11 +48,14 @@ function App() {
     if (!contract) return;
     try {
       const details = await contract.methods.getUserDetails(address).call();
-      setUserDetails({ name: details[0], tokens: details[1] });
-    } catch {
+      console.log("Fetched User Details:", details); // Debug log to verify the returned values
+      setUserDetails({ name: details[0], tokens: parseInt(details[1]) }); // Ensure tokens are parsed as integers
+    } catch (error) {
+      console.error("Error fetching user details:", error);
       setErrorMessage("Could not fetch user details.");
     }
   };
+  
 
   const handleRegister = async () => {
     if (!registerAddress || !regName || !regPassword) {
