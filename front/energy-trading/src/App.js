@@ -1,132 +1,196 @@
 import React, { useEffect, useState } from "react";
 import Web3 from "web3";
-import EnergyTrading from "./contracts/EnergyTrading.json";
+import MainBlockchain from "./contracts/MainBlockchain.json";
+import SubBlockchain from "./contracts/SubBlockchain.json";
 import { sha3 } from "web3-utils";
-import "./App.css"; // Link to the external CSS file for improved styling
+import "./App.css"; // External CSS file for styling
 
 function App() {
   const [web3, setWeb3] = useState(null);
-  const [contract, setContract] = useState(null);
-  const [userDetails, setUserDetails] = useState({ name: "", tokens: 0 });
-  const [registerAddress, setRegisterAddress] = useState("");
-  const [regName, setRegName] = useState("");
-  const [regPassword, setRegPassword] = useState("");
+  const [mainContract, setMainContract] = useState(null);
+  const [subContracts, setSubContracts] = useState([]);
+  const [neighborhoods, setNeighborhoods] = useState([]);
+  const [selectedNeighborhood, setSelectedNeighborhood] = useState(null);
+
+  // Registration Fields
+  const [registerName, setRegisterName] = useState("");
+  const [registerAddress, setRegisterAddress] = useState(""); 
+  const [registerPassword, setRegisterPassword] = useState("");
+
+  // Login Fields
   const [loginAddress, setLoginAddress] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+
   const [loggedInAddress, setLoggedInAddress] = useState(null);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [userDetails, setUserDetails] = useState({ name: "", tokens: 0 });
   const [buyAmount, setBuyAmount] = useState(0);
   const [sellAmount, setSellAmount] = useState(0);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    const loadWeb3AndBlockchainData = async () => {
+    const loadBlockchainData = async () => {
       try {
         const web3Instance = new Web3("http://127.0.0.1:8545");
         setWeb3(web3Instance);
 
         const networkId = await web3Instance.eth.net.getId();
-        const deployedNetwork = EnergyTrading.networks[networkId];
+        const deployedMainNetwork = MainBlockchain.networks[networkId];
 
-        if (deployedNetwork) {
-          const contractInstance = new web3Instance.eth.Contract(
-            EnergyTrading.abi,
-            deployedNetwork.address
+        if (deployedMainNetwork) {
+          const mainInstance = new web3Instance.eth.Contract(
+            MainBlockchain.abi,
+            deployedMainNetwork.address
           );
-          setContract(contractInstance);
+          setMainContract(mainInstance);
+
+          // Fetch Sub-Blockchain Addresses
+          const subAddresses = await mainInstance.methods.getAllSubBlockchainAddresses().call();
+
+          const subInstances = await Promise.all(
+            subAddresses.map(async (address) => {
+              const subInstance = new web3Instance.eth.Contract(SubBlockchain.abi, address);
+              const name = await subInstance.methods.neighborhoodName().call();
+              return { address, name, instance: subInstance };
+            })
+          );
+          setSubContracts(subInstances);
+          setNeighborhoods(subInstances.map((sub) => sub.name));
         } else {
-          setErrorMessage("No deployed contract found on this network!");
+          setErrorMessage("Main blockchain not deployed on this network.");
         }
       } catch (error) {
-        setErrorMessage("Initialization error. Check console.");
+        console.error("Initialization error:", error);
+        setErrorMessage("Failed to initialize blockchain.");
       }
     };
 
-    loadWeb3AndBlockchainData();
+    loadBlockchainData();
   }, []);
 
-  const getUserDetails = async (address) => {
-    if (!contract) return;
-    try {
-      const details = await contract.methods.getUserDetails(address).call();
-      console.log("Fetched User Details:", details); // Debug log to verify the returned values
-      setUserDetails({ name: details[0], tokens: parseInt(details[1]) }); // Ensure tokens are parsed as integers
-    } catch (error) {
-      console.error("Error fetching user details:", error);
-      setErrorMessage("Could not fetch user details.");
-    }
-  };
-  
-
   const handleRegister = async () => {
-    if (!registerAddress || !regName || !regPassword) {
-      setErrorMessage("All fields are required for registration.");
+    if (!registerName || !registerAddress || !registerPassword || !selectedNeighborhood) {
+      setErrorMessage("All fields, including address and neighborhood, are required for registration.");
       return;
     }
+
+    const neighborhoodContract = subContracts.find((sub) => sub.name === selectedNeighborhood);
+    if (!neighborhoodContract) {
+      setErrorMessage("Selected neighborhood not found.");
+      return;
+    }
+
     try {
-      const passwordHash = sha3(regPassword);
-      await contract.methods
-        .registerUserWithCredentials(regName, passwordHash)
+      const passwordHash = sha3(registerPassword);
+
+      // Register user in the SubBlockchain
+      await neighborhoodContract.instance.methods
+        .registerUser(registerName, passwordHash)
         .send({ from: registerAddress, gas: 3000000 });
+
       setErrorMessage("Registered successfully!");
-    } catch {
-      setErrorMessage("Registration failed.");
+    } catch (error) {
+      console.error("Registration error:", error);
+      setErrorMessage("Registration failed. Check console for details.");
     }
   };
 
   const handleLogin = async () => {
-    if (!loginAddress || !loginPassword) {
-      setErrorMessage("All fields are required for login.");
+    if (!loginAddress || !loginPassword || !selectedNeighborhood) {
+      setErrorMessage("All fields, including neighborhood selection, are required for login.");
       return;
     }
+
+    const neighborhoodContract = subContracts.find((sub) => sub.name === selectedNeighborhood);
+    if (!neighborhoodContract) {
+      setErrorMessage("Selected neighborhood not found.");
+      return;
+    }
+
     try {
-      await getUserDetails(loginAddress);
-      const userDataOnChain = await contract.methods.users(loginAddress).call();
+      const userData = await neighborhoodContract.instance.methods.users(loginAddress).call();
+      if (!userData.isRegistered) {
+        setErrorMessage("User not registered in this neighborhood.");
+        return;
+      }
+
       const enteredPasswordHash = sha3(loginPassword);
-      if (userDataOnChain.passwordHash === enteredPasswordHash) {
+      if (userData.passwordHash === enteredPasswordHash) {
         setLoggedInAddress(loginAddress);
-        await getUserDetails(loginAddress);
+        setUserDetails({ name: userData.name, tokens: parseInt(userData.tokens, 10) });
         setErrorMessage("");
       } else {
         setErrorMessage("Invalid credentials.");
       }
-    } catch {
+    } catch (error) {
+      console.error("Login error:", error);
       setErrorMessage("Login failed.");
     }
   };
 
   const handleBuyEnergy = async () => {
+    if (!buyAmount || buyAmount <= 0) {
+      setErrorMessage("Enter a valid amount to buy energy.");
+      return;
+    }
+
+    const neighborhoodContract = subContracts.find((sub) => sub.name === selectedNeighborhood);
+    if (!neighborhoodContract) {
+      setErrorMessage("Selected neighborhood not found.");
+      return;
+    }
+
     try {
-      const amountToBuy = parseInt(buyAmount, 10);
-      await contract.methods.buyEnergy(amountToBuy).send({
-        from: loggedInAddress,
-        gas: 3000000,
-      });
-      await getUserDetails(loggedInAddress);
-    } catch {
+      await neighborhoodContract.instance.methods
+        .buyEnergy(parseInt(buyAmount))
+        .send({ from: loggedInAddress, gas: 3000000 });
+
+      setErrorMessage("Energy bought successfully!");
+      await handleLogin(); // Refresh user data
+    } catch (error) {
+      console.error("Error buying energy:", error);
       setErrorMessage("Error buying energy.");
     }
   };
 
   const handleSellEnergy = async () => {
+    if (!sellAmount || sellAmount <= 0) {
+      setErrorMessage("Enter a valid amount to sell energy.");
+      return;
+    }
+
+    const neighborhoodContract = subContracts.find((sub) => sub.name === selectedNeighborhood);
+    if (!neighborhoodContract) {
+      setErrorMessage("Selected neighborhood not found.");
+      return;
+    }
+
     try {
-      const amountToSell = parseInt(sellAmount, 10);
-      await contract.methods.sellEnergy(amountToSell).send({
-        from: loggedInAddress,
-        gas: 3000000,
-      });
-      await getUserDetails(loggedInAddress);
-    } catch {
+      await neighborhoodContract.instance.methods
+        .sellEnergy(parseInt(sellAmount))
+        .send({ from: loggedInAddress, gas: 3000000 });
+
+      setErrorMessage("Energy sold successfully!");
+      await handleLogin(); // Refresh user data
+    } catch (error) {
+      console.error("Error selling energy:", error);
       setErrorMessage("Error selling energy.");
     }
   };
 
+
   return (
     <div className="app-container">
-      <h1 className="app-title">Energy Trading Platform</h1>
+      <h1 className="app-title">Smart City Energy Trading Platform</h1>
       {errorMessage && <p className="error-message">{errorMessage}</p>}
       {!loggedInAddress && (
         <div className="card">
           <h3>Register</h3>
+          <input
+            type="text"
+            placeholder="Name"
+            value={registerName}
+            onChange={(e) => setRegisterName(e.target.value)}
+          />
           <input
             type="text"
             placeholder="Address"
@@ -134,20 +198,26 @@ function App() {
             onChange={(e) => setRegisterAddress(e.target.value)}
           />
           <input
-            type="text"
-            placeholder="Name"
-            value={regName}
-            onChange={(e) => setRegName(e.target.value)}
-          />
-          <input
             type="password"
             placeholder="Password"
-            value={regPassword}
-            onChange={(e) => setRegPassword(e.target.value)}
+            value={registerPassword}
+            onChange={(e) => setRegisterPassword(e.target.value)}
           />
+          <select
+            value={selectedNeighborhood || ""}
+            onChange={(e) => setSelectedNeighborhood(e.target.value)}
+          >
+            <option value="" disabled>Select a neighborhood</option>
+            {neighborhoods.map((neighborhood) => (
+              <option key={neighborhood} value={neighborhood}>
+                {neighborhood}
+              </option>
+            ))}
+          </select>
           <button className="btn" onClick={handleRegister}>
             Register
           </button>
+  
           <h3>Login</h3>
           <input
             type="text"
@@ -161,6 +231,17 @@ function App() {
             value={loginPassword}
             onChange={(e) => setLoginPassword(e.target.value)}
           />
+          <select
+            value={selectedNeighborhood || ""}
+            onChange={(e) => setSelectedNeighborhood(e.target.value)}
+          >
+            <option value="" disabled>Select a neighborhood</option>
+            {neighborhoods.map((neighborhood) => (
+              <option key={neighborhood} value={neighborhood}>
+                {neighborhood}
+              </option>
+            ))}
+          </select>
           <button className="btn" onClick={handleLogin}>
             Login
           </button>
@@ -170,11 +251,12 @@ function App() {
         <div className="card">
           <h2>Welcome, {userDetails.name}</h2>
           <p>Tokens: {userDetails.tokens}</p>
+  
           <div>
             <h3>Buy Energy</h3>
             <input
               type="number"
-              placeholder="Amount"
+              placeholder="Amount to Buy"
               value={buyAmount}
               onChange={(e) => setBuyAmount(e.target.value)}
             />
@@ -182,11 +264,12 @@ function App() {
               Buy Energy
             </button>
           </div>
+  
           <div>
             <h3>Sell Energy</h3>
             <input
               type="number"
-              placeholder="Amount"
+              placeholder="Amount to Sell"
               value={sellAmount}
               onChange={(e) => setSellAmount(e.target.value)}
             />
@@ -198,6 +281,7 @@ function App() {
       )}
     </div>
   );
+  
 }
 
 export default App;
